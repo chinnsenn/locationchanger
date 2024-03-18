@@ -24,12 +24,20 @@ ts() {
 ID=`whoami`
 ts "I am '$ID'"
 
-SSID=`/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I | grep ' SSID' | cut -d : -f 2- | sed 's/^[ ]*//'`
+# SSID=`/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I | grep ' SSID' | cut -d : -f 2- | sed 's/^[ ]*//'`
+SSID=`/usr/sbin/networksetup -getairportnetwork en0 | awk -F": " '{print $2}'`
 
 LOCATION_NAMES=`scselect | tail -n +2 | cut -d \( -f 2- | sed 's/)$//'`
 CURRENT_LOCATION=`scselect | tail -n +2 | egrep '^\ +\*' | cut -d \( -f 2- | sed 's/)$//'`
 
 ts "Connected to '$SSID'"
+
+DEFAULT_LOCATION_FILE=$HOME/.locations/default_location.conf
+if [ -f $DEFAULT_LOCATION_FILE ]; then
+    DEFAULT_LOCATION=`cat $DEFAULT_LOCATION_FILE`
+    ts "Will switch the location to '$DEFAULT_LOCATION' (default)"
+    scselect "$DEFAULT_LOCATION"
+fi
 
 CONFIG_FILE=$HOME/.locations/locations.conf
 ts "Probing '$CONFIG_FILE'"
@@ -68,6 +76,8 @@ if [ "$NEW_LOCATION" != "" ]; then
             ts "Running '$SCRIPT'"
             "$SCRIPT"
         fi
+        SSID=`/usr/sbin/networksetup -getairportnetwork en0 | awk -F": " '{print $2}'`
+        osascript -e "display notification \"Network location changed to $NEW_LOCATION. Current Wi-Fi SSID: $SSID\" with title \"Location Changer\""
     else
         ts "Already at '$NEW_LOCATION'"
     fi
